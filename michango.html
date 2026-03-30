@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Michango Events — Group Contribution Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f2ec;
+  --surface: #ffffff;
+  --surface2: #f0ede6;
+  --border: #ddd9d0;
+  --primary: #0f5c4a;
+  --primary-light: #e8f5f1;
+  --primary-mid: #1a7a63;
+  --accent: #e8860a;
+  --danger: #c0392b;
+  --danger-light: #fdecea;
+  --text: #1a1a18;
+  --text2: #5a5a52;
+  --text3: #9a9a90;
+  --gold: #c9920a;
+  --paid: #0f5c4a;
+  --paid-bg: #e8f5f1;
+  --partial: #e8860a;
+  --partial-bg: #fef3e2;
+  --unpaid-bg: #f0ede6;
+  --shadow: 0 2px 16px rgba(15,92,74,0.08);
+  --shadow-lg: 0 8px 40px rgba(15,92,74,0.14);
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* Layout */
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 260px;
+  background: var(--primary);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+}
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-logo .org-tag {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 6px;
+}
+.sidebar-logo h1 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+.sidebar-logo .group-type {
+  font-size: 10px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 4px;
+  font-family: 'DM Mono', monospace;
+}
+nav {
+  padding: 24px 0;
+  flex: 1;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: all 0.2s;
+  user-select: none;
+}
+.nav-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.nav-item.active {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-left-color: #7ddbbb;
+}
+.nav-item .icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+}
+.sidebar-footer {
+  padding: 20px 24px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  font-family: 'DM Mono', monospace;
+}
+
+/* Main Content */
+.main {
+  margin-left: 260px;
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.topbar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.topbar-sub {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 2px;
+  font-family: 'DM Mono', monospace;
+}
+.topbar-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.content {
+  padding: 28px 32px;
+  flex: 1;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--primary-mid);
+  transform: translateY(-1px);
+}
+.btn-success {
+  background: #16a34a;
+  color: #fff;
+}
+.btn-success:hover {
+  background: #15803d;
+}
+.btn-warning {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-warning:hover {
+  background: #c97a0a;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover {
+  background: var(--surface2);
+}
+.btn-danger {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid #f5c6c2;
+}
+.btn-danger:hover {
+  background: #f9d5d2;
+}
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.btn-icon {
+  padding: 8px;
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+.card-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--surface2);
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text2);
+}
+.card-body {
+  padding: 24px;
+}
+
+/* Form Elements */
+.form-row {
+  margin-bottom: 20px;
+}
+.form-row label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+.form-row input,
+.form-row select,
+.form-row textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15,92,74,0.1);
+}
+.form-row textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+/* Events Grid */
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 24px;
+  margin-top: 8px;
+}
+.event-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all 0.25s;
+}
+.event-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+}
+.event-header {
+  padding: 16px 20px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.event-name {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--primary);
+  line-height: 1.3;
+}
+.event-date {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: 'DM Mono', monospace;
+  margin-top: 4px;
+}
+.event-badge {
+  background: var(--primary-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  white-space: nowrap;
+}
+.event-desc {
+  padding: 12px 20px;
+  font-size: 12px;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+  background: #fefefc;
+}
+.event-stats {
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: #fafaf8;
+}
+.event-stat {
+  text-align: center;
+  flex: 1;
+}
+.event-stat-value {
+  font-weight: 800;
+  font-size: 18px;
+  font-family: 'DM Mono', monospace;
+  color: var(--primary);
+}
+.event-stat-label {
+  font-size: 9px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+.event-members {
+  max-height: 320px;
+  overflow-y: auto;
+}
+.event-member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.event-member-item:hover {
+  background: var(--surface2);
+}
+.event-member-name {
+  font-weight: 500;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.member-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.event-member-status {
+  padding: 5px 14px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.1s;
+}
+.status-paid {
+  background: var(--paid-bg);
+  color: var(--paid);
+}
+.status-unpaid {
+  background: var(--unpaid-bg);
+  color: var(--text3);
+}
+.event-footer {
+  padding: 14px 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+.event-total {
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  color: var(--primary);
+  font-weight: 600;
+}
+.event-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text3);
+}
+.empty-state .icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+.empty-state h3 {
+  font-size: 18px;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.empty-state p {
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 30, 25, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open {
+  display: flex;
+}
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlide 0.2s ease;
+}
+@keyframes modalSlide {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text2);
+  transition: background 0.15s;
+}
+.modal-close:hover {
+  background: var(--border);
+}
+.modal-body {
+  padding: 24px;
+}
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--text);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toastIn 0.25s ease;
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Progress Bar */
+.progress-bar-mini {
+  width: 60px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill-mini {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 220px;
+  }
+  .main {
+    margin-left: 220px;
+  }
+  .content {
+    padding: 20px;
+  }
+  .events-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .sidebar {
+    transform: translateX(-100%);
+    position: fixed;
+    z-index: 200;
+  }
+  .main {
+    margin-left: 0;
+  }
+  .topbar {
+    padding: 12px 16px;
+  }
+  .content {
+    padding: 16px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="org-tag">Mkoba Family · TPB</div>
+      <h1>Michango Events</h1>
+      <div class="group-type">Group Contribution Tracker</div>
+    </div>
+    <nav>
+      <div class="nav-item active" onclick="switchTab('events')">
+        <span class="icon">🎯</span>
+        <span>Michango Events</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('members')">
+        <span> <div class="nav-item active" onclick="window.location.href='dashboard.html'"><span class="icon">📊</span>Dashboard</div></span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div>© 2026 Michango System</div>
+      <div style="margin-top: 4px;">v2.0 · 10,000 TSH/event</div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Michango Events</div>
+        <div class="topbar-sub" id="topbar-sub">Create and track special contributions</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openCreateEventModal()">
+          <span>➕</span> Create Event
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Events Tab -->
+      <div id="events-tab">
+        <!-- Stats Summary -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px;">
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-body" style="text-align: center; padding: 20px;">
+              <div style="font-size: 28px; font-weight: 800; color: var(--primary);" id="total-events">0</div>
+              <div style="font-size: 11px; color: var(--text3); margin-top: 4px;">TOTAL EVENTS</div>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-body" style="text-align: center; padding: 20px;">
+              <div style="font-size: 28px; font-weight: 800; color: var(--primary);" id="total-collected">TZS 0</div>
+              <div style="font-size: 11px; color: var(--text3); margin-top: 4px;">TOTAL COLLECTED</div>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-body" style="text-align: center; padding: 20px;">
+              <div style="font-size: 28px; font-weight: 800; color: var(--primary);" id="avg-completion">0%</div>
+              <div style="font-size: 11px; color: var(--text3); margin-top: 4px;">AVG COMPLETION</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Events Grid -->
+        <div id="events-container"></div>
+      </div>
+
+      <!-- Members Tab -->
+      <div id="members-tab" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">👥 Group Members</span>
+            <button class="btn btn-ghost btn-sm" onclick="openAddMemberModal()">➕ Add Member</button>
+          </div>
+          <div class="card-body" style="padding: 0;">
+            <div id="members-list-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Event Modal -->
+<div class="modal-overlay" id="create-event-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🎉 Create Michango Event</span>
+      <button class="modal-close" onclick="closeModal('create-event-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Event Name *</label>
+        <input type="text" id="event-name" placeholder="e.g., Wedding Contribution, Funeral Support" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label>Description (optional)</label>
+        <textarea id="event-desc" rows="2" placeholder="Additional details about this event..."></textarea>
+      </div>
+      <div class="form-row">
+        <label>Contribution Amount per Member</label>
+        <input type="number" id="event-amount" value="10000" step="1000" style="background: var(--surface2); font-weight: 600;">
+        <small style="display: block; margin-top: 6px; color: var(--text3);">TZS 10,000 (standard contribution)</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('create-event-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createMichangoEvent()">Create Event</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal-overlay" id="add-member-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">➕ Add Group Member</span>
+      <button class="modal-close" onclick="closeModal('add-member-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Full Name *</label>
+        <input type="text" id="member-name" placeholder="e.g., JOHN DOE">
+      </div>
+      <div class="form-row">
+        <label>Phone Number</label>
+        <input type="text" id="member-phone" placeholder="255XXXXXXXXX">
+      </div>
+      <div class="form-row">
+        <label>Role</label>
+        <select id="member-role">
+          <option value="MEMBER">Member</option>
+          <option value="CHAIRPERSON">Chairperson</option>
+          <option value="TREASURER">Treasurer</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-member-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addMember()">Add Member</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== CONSTANTS ==========
+  const PER_PERIOD = 10000;
+  
+  // ========== DATA STORAGE ==========
+  let members = [];
+  let events = [];
+  
+  // Load data from localStorage
+  function loadData() {
+    try {
+      const savedMembers = localStorage.getItem('michango_members');
+      members = savedMembers ? JSON.parse(savedMembers) : [
+        { id: 1, name: 'SAMSON MUHERE', phone: '255758347960', role: 'TREASURER' },
+        { id: 2, name: 'ELIZABETH CHACHA', phone: '255740961710', role: 'MEMBER' },
+        { id: 3, name: 'MICHAEL MAGORI', phone: '255761730049', role: 'MEMBER' },
+        { id: 4, name: 'ANNA NYAHILI', phone: '255769285513', role: 'MEMBER' },
+        { id: 5, name: 'GAILUAKA ROBERT', phone: '255791804931', role: 'MEMBER' },
+        { id: 6, name: 'ELIZA MUJASI', phone: '255750704730', role: 'CHAIRPERSON' },
+        { id: 7, name: 'DOROTHEA JOHN', phone: '255741615337', role: 'MEMBER' },
+        { id: 8, name: 'ELIZABETH JAMES', phone: '255742014558', role: 'MEMBER' },
+        { id: 9, name: 'LUCAS KOROSO', phone: '255748350070', role: 'MEMBER' },
+        { id: 10, name: 'AGNES MSETI', phone: '255754620070', role: 'MEMBER' },
+        { id: 11, name: 'JUDITH MARUA', phone: '255758344646', role: 'MEMBER' },
+        { id: 12, name: 'EMMANUEL MATIKO', phone: '255769418292', role: 'MEMBER' },
+        { id: 13, name: 'NANCY SIMON', phone: '255798238344', role: 'MEMBER' }
+      ];
+      
+      const savedEvents = localStorage.getItem('michango_events');
+      events = savedEvents ? JSON.parse(savedEvents) : [];
+    } catch (e) {
+      console.error('Error loading data:', e);
+      members = [];
+      events = [];
+    }
+  }
+  
+  function saveMembers() {
+    localStorage.setItem('michango_members', JSON.stringify(members));
+  }
+  
+  function saveEvents() {
+    localStorage.setItem('michango_events', JSON.stringify(events));
+  }
+  
+  function nextId(arr) {
+    return arr.length ? Math.max(...arr.map(x => x.id)) + 1 : 1;
+  }
+  
+  // Helper: format currency
+  function fmt(n) {
+    return 'TZS ' + Number(n).toLocaleString();
+  }
+  
+  function getInitials(name) {
+    return name.split(' ').slice(0, 2).map(w => w[0]).join('');
+  }
+  
+  // ========== EVENT FUNCTIONS ==========
+  function createMichangoEvent() {
+    const name = document.getElementById('event-name').value.trim();
+    if (!name) {
+      toast('Please enter an event name');
+      return;
+    }
+    
+    const desc = document.getElementById('event-desc').value.trim();
+    const amount = parseInt(document.getElementById('event-amount').value) || PER_PERIOD;
+    
+    if (members.length === 0) {
+      toast('No members in group. Please add members first.');
+      return;
+    }
+    
+    const newEvent = {
+      id: nextId(events),
+      name: name,
+      description: desc,
+      amountPerMember: amount,
+      createdAt: new Date().toISOString(),
+      members: members.map(m => ({
+        memberId: m.id,
+        name: m.name,
+        paid: false
+      })),
+      totalCollected: 0
+    };
+    
+    events.push(newEvent);
+    saveEvents();
+    closeModal('create-event-modal');
+    document.getElementById('event-name').value = '';
+    document.getElementById('event-desc').value = '';
+    renderEvents();
+    updateStats();
+    toast(`✅ Event "${name}" created with ${members.length} members`);
+  }
+  
+  function togglePayment(eventId, memberIndex) {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+    
+    event.members[memberIndex].paid = !event.members[memberIndex].paid;
+    event.totalCollected = event.members.filter(m => m.paid).length * event.amountPerMember;
+    saveEvents();
+    renderEvents();
+    updateStats();
+    toast(event.members[memberIndex].paid ? '✓ Marked as PAID' : '○ Marked as UNPAID');
+  }
+  
+  function resetEvent(eventId) {
+    if (!confirm('Reset all payments for this event? All members will be marked as unpaid.')) return;
+    const event = events.find(e => e.id === eventId);
+    if (event) {
+      event.members.forEach(m => m.paid = false);
+      event.totalCollected = 0;
+      saveEvents();
+      renderEvents();
+      updateStats();
+      toast('All payments reset');
+    }
+  }
+  
+  function deleteEvent(eventId) {
+    if (!confirm('Delete this event permanently? This cannot be undone.')) return;
+    events = events.filter(e => e.id !== eventId);
+    saveEvents();
+    renderEvents();
+    updateStats();
+    toast('Event deleted');
+  }
+  
+  // ========== MEMBER FUNCTIONS ==========
+  function addMember() {
+    const name = document.getElementById('member-name').value.trim().toUpperCase();
+    const phone = document.getElementById('member-phone').value.trim();
+    const role = document.getElementById('member-role').value;
+    
+    if (!name) {
+      toast('Please enter member name');
+      return;
+    }
+    
+    const newMember = {
+      id: nextId(members),
+      name: name,
+      phone: phone || '-',
+      role: role
+    };
+    
+    members.push(newMember);
+    saveMembers();
+    closeModal('add-member-modal');
+    document.getElementById('member-name').value = '';
+    document.getElementById('member-phone').value = '';
+    renderMembers();
+    toast(`✅ ${name} added to group`);
+  }
+  
+  function deleteMember(memberId) {
+    if (!confirm('Remove this member from the group? They will be removed from all events.')) return;
+    
+    // Remove member from all events
+    events.forEach(event => {
+      event.members = event.members.filter(m => m.memberId !== memberId);
+      event.totalCollected = event.members.filter(m => m.paid).length * event.amountPerMember;
+    });
+    
+    // Remove member from members list
+    members = members.filter(m => m.id !== memberId);
+    saveMembers();
+    saveEvents();
+    renderMembers();
+    renderEvents();
+    updateStats();
+    toast('Member removed');
+  }
+  
+  // ========== RENDER FUNCTIONS ==========
+  function renderEvents() {
+    const container = document.getElementById('events-container');
+    if (!container) return;
+    
+    if (events.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🎯</div>
+          <h3>No Events Yet</h3>
+          <p>Create your first Michango event to start tracking contributions.</p>
+          <button class="btn btn-primary" onclick="openCreateEventModal()">➕ Create Your First Event</button>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = `<div class="events-grid">` + events.map(event => {
+      const totalMembers = event.members.length;
+      const paidCount = event.members.filter(m => m.paid).length;
+      const percent = totalMembers > 0 ? (paidCount / totalMembers * 100).toFixed(1) : 0;
+      const target = totalMembers * event.amountPerMember;
+      
+      return `
+        <div class="event-card">
+          <div class="event-header">
+            <div>
+              <div class="event-name">${escapeHtml(event.name)}</div>
+              <div class="event-date">${new Date(event.createdAt).toLocaleDateString()}</div>
+            </div>
+            <div class="event-badge">${paidCount}/${totalMembers}</div>
+          </div>
+          ${event.description ? `<div class="event-desc">📝 ${escapeHtml(event.description)}</div>` : ''}
+          <div class="event-stats">
+            <div class="event-stat">
+              <div class="event-stat-value">${fmt(paidCount * event.amountPerMember)}</div>
+              <div class="event-stat-label">Collected</div>
+            </div>
+            <div class="event-stat">
+              <div class="event-stat-value">${fmt(target)}</div>
+              <div class="event-stat-label">Target</div>
+            </div>
+            <div class="event-stat">
+              <div class="event-stat-value">${percent}%</div>
+              <div class="event-stat-label">Progress</div>
+            </div>
+          </div>
+          <div class="event-members">
+            ${event.members.map((member, idx) => `
+              <div class="event-member-item" onclick="togglePayment(${event.id}, ${idx})">
+                <span class="event-member-name">
+                  <span class="member-avatar">${getInitials(member.name)}</span>
+                  ${escapeHtml(member.name)}
+                </span>
+                <span class="event-member-status ${member.paid ? 'status-paid' : 'status-unpaid'}">
+                  ${member.paid ? '✓ PAID' : '○ NOT PAID'}
+                </span>
+              </div>
+            `).join('')}
+          </div>
+          <div class="event-footer">
+            <span class="event-total">💰 ${fmt(event.amountPerMember)} per member</span>
+            <div class="event-actions">
+              <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); resetEvent(${event.id})">⟳ Reset</button>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteEvent(${event.id})">🗑 Delete</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('') + `</div>`;
+  }
+  
+  function renderMembers() {
+    const container = document.getElementById('members-list-container');
+    if (!container) return;
+    
+    if (members.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding: 40px;">
+          <div class="icon">👥</div>
+          <p>No members yet. Add members to start tracking events.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = `
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: var(--surface2); border-bottom: 1px solid var(--border);">
+            <th style="padding: 14px 16px; text-align: left;">#</th>
+            <th style="padding: 14px 16px; text-align: left;">Name</th>
+            <th style="padding: 14px 16px; text-align: left;">Phone</th>
+            <th style="padding: 14px 16px; text-align: left;">Role</th>
+            <th style="padding: 14px 16px; text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${members.map((m, i) => `
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 12px 16px; color: var(--text3);">${i + 1}</td>
+              <td style="padding: 12px 16px; font-weight: 500;">${escapeHtml(m.name)}</td>
+              <td style="padding: 12px 16px; color: var(--text2);">${escapeHtml(m.phone)}</td>
+              <td style="padding: 12px 16px;">
+                <span style="background: var(--primary-light); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; color: var(--primary);">
+                  ${m.role}
+                </span>
+              </td>
+              <td style="padding: 12px 16px; text-align: center;">
+                <button class="btn btn-danger btn-sm" onclick="deleteMember(${m.id})" style="padding: 4px 12px;">🗑 Remove</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+  
+  function updateStats() {
+    document.getElementById('total-events').textContent = events.length;
+    const totalCollected = events.reduce((sum, e) => sum + e.totalCollected, 0);
+    document.getElementById('total-collected').textContent = fmt(totalCollected);
+    const avgPercent = events.length > 0 
+      ? events.reduce((sum, e) => sum + (e.members.filter(m => m.paid).length / Math.max(1, e.members.length) * 100), 0) / events.length
+      : 0;
+    document.getElementById('avg-completion').textContent = Math.round(avgPercent) + '%';
+  }
+  
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+  
+  // ========== UI HELPERS ==========
+  let currentTab = 'events';
+  
+  function switchTab(tab) {
+    currentTab = tab;
+    const eventsTab = document.getElementById('events-tab');
+    const membersTab = document.getElementById('members-tab');
+    const navItems = document.querySelectorAll('.nav-item');
+    const topbarTitle = document.getElementById('topbar-title');
+    const topbarSub = document.getElementById('topbar-sub');
+    
+    if (tab === 'events') {
+      eventsTab.style.display = 'block';
+      membersTab.style.display = 'none';
+      topbarTitle.textContent = 'Michango Events';
+      topbarSub.textContent = 'Create and track special contributions';
+      renderEvents();
+    } else {
+      eventsTab.style.display = 'none';
+      membersTab.style.display = 'block';
+      topbarTitle.textContent = 'Group Members';
+      topbarSub.textContent = 'Manage your group members';
+      renderMembers();
+    }
+    
+    navItems.forEach((item, idx) => {
+      if ((tab === 'events' && idx === 0) || (tab === 'members' && idx === 1)) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+  
+  function openCreateEventModal() {
+    document.getElementById('event-name').value = '';
+    document.getElementById('event-desc').value = '';
+    document.getElementById('event-amount').value = '10000';
+    openModal('create-event-modal');
+  }
+  
+  function openAddMemberModal() {
+    document.getElementById('member-name').value = '';
+    document.getElementById('member-phone').value = '';
+    document.getElementById('member-role').value = 'MEMBER';
+    openModal('add-member-modal');
+  }
+  
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+  }
+  
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+  
+  function toast(msg) {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `<span>${msg}</span>`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+  }
+  
+  // Close modals when clicking outside
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+  
+  // ========== INITIALIZATION ==========
+  loadData();
+  renderEvents();
+  renderMembers();
+  updateStats();
+</script>
+</body>
+</html>

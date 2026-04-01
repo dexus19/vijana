@@ -499,35 +499,18 @@ tfoot td.label-cell{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;te
       <div class="login-sub">Group Manager</div>
     </div>
     <div class="login-body">
-      <!-- Role tabs -->
-      <div class="role-tabs">
-        <button class="role-tab active" id="tab-member" onclick="switchLoginRole('member')">
-          👥 Member
-        </button>
-        <button class="role-tab" id="tab-admin" onclick="switchLoginRole('admin')">
-          🔐 Admin
-        </button>
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="your@email.com" autocomplete="email"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
       </div>
-
-      <!-- Member login -->
-      <div id="login-member-fields">
-        <div class="login-field">
-          <label>Member Password</label>
-          <input type="password" id="member-pass" placeholder="Enter member password" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
       </div>
-
-      <!-- Admin login -->
-      <div id="login-admin-fields" style="display:none">
-        <div class="login-field">
-          <label>Admin Password</label>
-          <input type="password" id="admin-pass" placeholder="Enter admin password" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
-      </div>
-
-      <div class="login-error" id="login-error">Incorrect password. Please try again.</div>
-
-      <button class="login-btn" onclick="doLogin()">Sign In →</button>
+      <div class="login-error" id="login-error">Incorrect email or password.</div>
+      <button class="login-btn" id="login-btn" onclick="doLogin()">Sign In →</button>
       <div class="login-footer">© 2026 UMOJA WVJ GROUP</div>
     </div>
   </div>
@@ -633,8 +616,7 @@ tfoot td.label-cell{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;te
               <th class="sticky-col" style="left:36px;min-width:170px">Member</th>
               <th class="center">Role</th>
               <th class="right">Total Dep.</th>
-              <th class="center">Ada</th>
-              <th class="center">Jan</th><th class="center">Feb</th><th class="center">Mar</th>
+              <th class="center">Mar</th>
               <th class="center">Apr</th><th class="center">May</th><th class="center">Jun</th>
               <th class="center">Jul</th><th class="center">Aug</th><th class="center">Sep</th>
               <th class="center">Oct</th><th class="center">Nov</th><th class="center">Dec</th>
@@ -745,7 +727,7 @@ tfoot td.label-cell{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;te
       <button class="modal-close" onclick="closeModal('modal-payment')">✕</button>
     </div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Each period = <strong>TZS 10,000</strong>. Deposit auto-splits: Ada → Jan → … → Dec.</p>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Each period = <strong>TZS 10,000</strong>. Deposit auto-splits: March → April → … → December.</p>
       <input type="hidden" id="pay-member-id">
       <div class="form-row"><label>Total Deposit (TZS)</label><input type="number" id="pay-total" placeholder="0" min="0" step="1000" inputmode="numeric" oninput="previewSplit()"></div>
       <div id="split-preview"></div>
@@ -797,193 +779,200 @@ tfoot td.label-cell{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;te
   </div>
 </div>
 
-<script>
+<script type="module">
 /* ══════════════════════════════════════════════════════
-   AUTH — passwords stored as hashed strings
-   Admin : Admin2026
-   Member: vijana
+   SUPABASE — official SDK via CDN for real Auth
 ══════════════════════════════════════════════════════ */
-const AUTH = {
-  admin:  'Admin2026',
-  member: 'vijana'
-};
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-// Session stored in sessionStorage — clears on tab/browser close
-function getSession(){ try{ return JSON.parse(sessionStorage.getItem('umoja_session')||'null'); }catch{ return null; } }
-function setSession(role){ sessionStorage.setItem('umoja_session', JSON.stringify({role, ts: Date.now()})); }
-function clearSession(){ sessionStorage.removeItem('umoja_session'); }
-function isAdmin(){ return getSession()?.role === 'admin'; }
-function isMember(){ return getSession()?.role === 'member'; }
+const SUPA_URL = 'https://fgofqrvvefmvqndnqmur.supabase.co';
+const SUPA_KEY = 'sb_publishable_Q6gvDK7nthMDSw4VP5qOdQ_Kec2Weh3';
+const supabase = createClient(SUPA_URL, SUPA_KEY);
 
-let _loginRole = 'member'; // which tab is active on login screen
-
-function switchLoginRole(role){
-  _loginRole = role;
-  document.getElementById('tab-member').classList.toggle('active', role==='member');
-  document.getElementById('tab-admin').classList.toggle('active', role==='admin');
-  document.getElementById('login-member-fields').style.display = role==='member'?'block':'none';
-  document.getElementById('login-admin-fields').style.display  = role==='admin'?'block':'none';
-  document.getElementById('login-error').classList.remove('show');
-  // focus correct field
-  setTimeout(()=>{
-    const f = role==='member'?'member-pass':'admin-pass';
-    document.getElementById(f)?.focus();
-  }, 50);
+/* ══════════════════════════════════════════════════════
+   XSS PROTECTION — escape all user content before innerHTML
+══════════════════════════════════════════════════════ */
+function esc(str){
+  if(str==null)return'';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-function doLogin(){
-  const errEl = document.getElementById('login-error');
+/* ══════════════════════════════════════════════════════
+   INACTIVITY AUTO-LOGOUT — 30 minutes
+══════════════════════════════════════════════════════ */
+let _inactivityTimer;
+const INACTIVITY_MS = 30 * 60 * 1000;
+
+function resetInactivityTimer(){
+  clearTimeout(_inactivityTimer);
+  _inactivityTimer = setTimeout(async()=>{
+    toast('⏱ Session expired — logging out');
+    setTimeout(doLogout, 1500);
+  }, INACTIVITY_MS);
+}
+function startInactivityWatcher(){
+  ['mousemove','keydown','touchstart','click','scroll'].forEach(ev=>
+    document.addEventListener(ev, resetInactivityTimer, {passive:true}));
+  resetInactivityTimer();
+}
+function stopInactivityWatcher(){
+  clearTimeout(_inactivityTimer);
+  ['mousemove','keydown','touchstart','click','scroll'].forEach(ev=>
+    document.removeEventListener(ev, resetInactivityTimer));
+}
+
+/* ══════════════════════════════════════════════════════
+   AUTH STATE — role comes from server, never client
+══════════════════════════════════════════════════════ */
+let _currentUser = null;
+let _currentRole = null;
+function isAdmin()  { return _currentRole === 'admin';  }
+function isMember() { return _currentRole === 'member'; }
+
+/* ══════════════════════════════════════════════════════
+   LOGIN / LOGOUT
+══════════════════════════════════════════════════════ */
+async function doLogin(){
+  const email    = document.getElementById('login-email').value.trim().toLowerCase();
+  const password = document.getElementById('login-password').value;
+  const errEl    = document.getElementById('login-error');
+  const btn      = document.getElementById('login-btn');
   errEl.classList.remove('show');
-  const pass = _loginRole==='admin'
-    ? document.getElementById('admin-pass').value
-    : document.getElementById('member-pass').value;
 
-  if(pass === AUTH[_loginRole]){
-    setSession(_loginRole);
-    document.getElementById('login-screen').classList.remove('active');
-    applyRoleUI(_loginRole);
-    initApp();
-  } else {
-    errEl.classList.add('show');
-    // clear input
-    const fid = _loginRole==='admin'?'admin-pass':'member-pass';
-    document.getElementById(fid).value='';
-    document.getElementById(fid).focus();
+  if(!email||!password){
+    errEl.textContent='Please enter your email and password.';
+    errEl.classList.add('show'); return;
   }
+
+  btn.textContent='Signing in…'; btn.disabled=true;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  btn.textContent='Sign In →'; btn.disabled=false;
+
+  if(error){
+    errEl.textContent='Incorrect email or password.';
+    errEl.classList.add('show');
+    document.getElementById('login-password').value='';
+    document.getElementById('login-password').focus();
+    return;
+  }
+
+  const role = data.user?.user_metadata?.role;
+  if(role!=='admin'&&role!=='member'){
+    errEl.textContent='Account not authorised. Contact your admin.';
+    errEl.classList.add('show');
+    await supabase.auth.signOut(); return;
+  }
+
+  _currentUser=data.user; _currentRole=role;
+  document.getElementById('login-screen').classList.remove('active');
+  document.getElementById('login-email').value='';
+  document.getElementById('login-password').value='';
+  applyRoleUI(role);
+  startInactivityWatcher();
+  await fetchAll();
+  renderDashboard();
 }
 
-function doLogout(){
-  clearSession();
-  // Clear password fields
-  document.getElementById('admin-pass').value='';
-  document.getElementById('member-pass').value='';
-  document.getElementById('login-error').classList.remove('show');
+async function doLogout(){
+  stopInactivityWatcher();
+  await supabase.auth.signOut();
+  _currentUser=null; _currentRole=null;
+  _members=[]; _events=[]; _contribs=[];
   document.getElementById('login-screen').classList.add('active');
-  // reset to member tab
-  switchLoginRole('member');
+  document.getElementById('login-error').classList.remove('show');
+  setTimeout(()=>document.getElementById('login-email')?.focus(),200);
 }
 
 function applyRoleUI(role){
-  const admin = role === 'admin';
-
-  // Topbar: show/hide add btn, export, badge
-  document.getElementById('topbar-add-btn').style.display   = admin ? '' : 'none';
-  document.getElementById('export-wrap-btn').style.display  = admin ? '' : 'none';
-  document.getElementById('member-badge').style.display     = admin ? 'none' : 'inline-flex';
-
-  // FAB — only admin
-  document.getElementById('main-fab').style.display = admin ? '' : 'none';
-
-  // Events page: hide "New Event" button for members
-  // (handled dynamically in renderEventsList)
-
-  // Sidebar role label
-  document.getElementById('sidebar-role-label').textContent =
-    admin ? '🔐 Admin · UMOJA WVJ' : '👁 Member View · UMOJA WVJ';
-
-  // Member mode class on body (disables toggles, hides action buttons via CSS)
-  document.body.classList.toggle('member-mode', !admin);
-}
-
-function initApp(){
-  // Kick off the app after login
-  showView('dashboard', document.querySelector('.nav-item'));
+  const admin=role==='admin';
+  document.getElementById('topbar-add-btn').style.display  =admin?'':'none';
+  document.getElementById('export-wrap-btn').style.display =admin?'':'none';
+  document.getElementById('member-badge').style.display    =admin?'none':'inline-flex';
+  document.getElementById('main-fab').style.display        =admin?'':'none';
+  document.getElementById('sidebar-role-label').textContent=
+    admin?'🔐 Admin · UMOJA WVJ':'👁 Member View · UMOJA WVJ';
+  document.body.classList.toggle('member-mode',!admin);
 }
 
 /* ══════════════════════════════════════════════════════
-   SUPABASE CONFIG
+   DATABASE HELPERS — Supabase SDK (no raw fetch)
 ══════════════════════════════════════════════════════ */
-const SUPA_URL = 'https://fgofqrvvefmvqndnqmur.supabase.co';
-const SUPA_KEY = 'sb_publishable_Q6gvDK7nthMDSw4VP5qOdQ_Kec2Weh3';
-
-async function sb(path, opts={}) {
-  const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': `Bearer ${SUPA_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': opts.prefer || 'return=representation',
-      ...opts.headers
-    },
-    ...opts
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Supabase ${res.status}: ${err}`);
-  }
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
+async function dbGet(table,opts={}){
+  let q=supabase.from(table).select(opts.select||'*');
+  if(opts.order) q=q.order(opts.order,{ascending:opts.asc??true});
+  const{data,error}=await q;
+  if(error)throw error;
+  return data||[];
+}
+async function dbInsert(table,body){
+  const{data,error}=await supabase.from(table).insert(body).select();
+  if(error)throw error;
+  return data;
+}
+async function dbUpdate(table,match,body){
+  let q=supabase.from(table).update(body);
+  Object.entries(match).forEach(([k,v])=>{q=q.eq(k,v);});
+  const{data,error}=await q.select();
+  if(error)throw error;
+  return data;
+}
+async function dbDelete(table,match){
+  let q=supabase.from(table).delete();
+  Object.entries(match).forEach(([k,v])=>{q=q.eq(k,v);});
+  const{error}=await q;
+  if(error)throw error;
+}
+async function dbUpsert(table,body,onConflict){
+  const{data,error}=await supabase.from(table).upsert(body,{onConflict}).select();
+  if(error)throw error;
+  return data;
 }
 
-// GET
-const sbGet  = (table, qs='')   => sb(`${table}?${qs}`);
-// POST (insert)
-const sbPost = (table, body)    => sb(table, {method:'POST', body:JSON.stringify(body)});
-// PATCH (update)
-const sbPatch= (table, qs, body)=> sb(`${table}?${qs}`, {method:'PATCH', body:JSON.stringify(body), prefer:'return=representation'});
-// DELETE
-const sbDel  = (table, qs)      => sb(`${table}?${qs}`, {method:'DELETE', prefer:'return=minimal'});
-
 /* ══════════════════════════════════════════════════════
-   IN-MEMORY CACHE — fetched once per page load / refresh
+   CACHE
 ══════════════════════════════════════════════════════ */
-let _members = [];
-let _events  = [];
-let _contribs= [];   // all contributions flat
+let _members=[],_events=[],_contribs=[];
 
-async function fetchAll() {
+async function fetchAll(){
   showLoader(true);
-  try {
-    const [members, events, contribs] = await Promise.all([
-      sbGet('members',      'order=deposit.desc'),
-      sbGet('events',       'order=date.desc'),
-      sbGet('contributions','select=*'),
+  try{
+    const[members,events,contribs]=await Promise.all([
+      dbGet('members',{order:'deposit',asc:false}),
+      dbGet('events',{order:'date',asc:false}),
+      dbGet('contributions'),
     ]);
-    _members  = members  || [];
-    _events   = events   || [];
-    // Coerce member_id to Number to avoid === type mismatches
-    _contribs = (contribs||[]).map(c=>({...c, member_id: Number(c.member_id)}));
-
-    // Attach contributions to each event for easy access
-    _events.forEach(ev => {
-      ev.contributions = _contribs.filter(c => c.event_id === ev.id);
-    });
-  } catch(e) {
-    toast('❌ Failed to load data — check connection');
-    console.error(e);
-  }
+    _members=members;
+    _events=events;
+    _contribs=contribs.map(c=>({...c,member_id:Number(c.member_id)}));
+    _events.forEach(ev=>{ev.contributions=_contribs.filter(c=>c.event_id===ev.id);});
+  }catch(e){toast('❌ Failed to load data');console.error(e);}
   showLoader(false);
 }
 
 /* ══════════════════════════════════════════════════════
-   LOADING OVERLAY
+   LOADER
 ══════════════════════════════════════════════════════ */
-function showLoader(on) {
-  let el = document.getElementById('global-loader');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'global-loader';
-    el.style.cssText = `
-      position:fixed;inset:0;background:rgba(255,255,255,.75);
-      display:flex;align-items:center;justify-content:center;
-      z-index:9998;backdrop-filter:blur(2px);
-      font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;
-      color:var(--primary);font-weight:600;gap:10px;
-    `;
-    el.innerHTML = `<span style="font-size:22px;animation:spin .8s linear infinite">⏳</span> Loading…`;
+function showLoader(on){
+  let el=document.getElementById('global-loader');
+  if(!el){
+    el=document.createElement('div');el.id='global-loader';
+    el.style.cssText='position:fixed;inset:0;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;z-index:9998;backdrop-filter:blur(2px);font-family:\'Plus Jakarta Sans\',sans-serif;font-size:14px;color:var(--primary);font-weight:600;gap:10px;';
+    el.innerHTML='<span style="font-size:22px;animation:spin .8s linear infinite">⏳</span> Loading…';
     document.body.appendChild(el);
-    const style = document.createElement('style');
-    style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
-    document.head.appendChild(style);
+    const s=document.createElement('style');
+    s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
   }
-  el.style.display = on ? 'flex' : 'none';
+  el.style.display=on?'flex':'none';
 }
 
 /* ══════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════ */
-const MONTHS=['ada','jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-const ML={ada:'Ada',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',may:'May',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
+const MONTHS=['mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const ML={mar:'March',apr:'April',may:'May',jun:'June',jul:'July',aug:'August',sep:'September',oct:'October',nov:'November',dec:'December'};
 const PER=10000;
 
 /* ══════════════════════════════════════════════════════
@@ -998,14 +987,14 @@ function splitDep(dep){
 function depStatus(a){return a<=0?'unpaid':a>=PER?'paid':'partial';}
 function pill(a){
   const s=depStatus(a),l=s==='paid'?`${fmt(a)} ✓`:s==='partial'?`${fmt(a)}…`:'—';
-  return `<span class="pay-pill pay-${s==='partial'?'unpaid':s}">${l}</span>`;
+  return`<span class="pay-pill pay-${s==='partial'?'unpaid':s}">${l}</span>`;
 }
-function ini(n){return n.split(' ').slice(0,2).map(w=>w[0]).join('');}
+function ini(n){if(!n)return'?';return n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
 function fmt(n){return Number(n).toLocaleString();}
 function fmtDate(d){
   if(!d)return'';
   try{const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
-  catch{return d;}
+  catch{return esc(d);}
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1015,7 +1004,7 @@ function toggleSidebar(){document.getElementById('sidebar').classList.toggle('op
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');}
 
 /* ══════════════════════════════════════════════════════
-   BOTTOM NAV & TOPBAR
+   NAV
 ══════════════════════════════════════════════════════ */
 function setBnav(id){
   document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
@@ -1026,7 +1015,7 @@ function handleTopbarAdd(){if(_currentView==='events')openAddEvent();else openAd
 function handleFab(){if(_currentView==='events')openAddEvent();else openAddMember();}
 function updateTopbarAddBtn(view){
   const btn=document.getElementById('topbar-add-btn');
-  btn.textContent=view==='events'?'＋ New Event':'＋ Add Member';
+  if(btn)btn.textContent=view==='events'?'＋ New Event':'＋ Add Member';
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1037,8 +1026,7 @@ const VMETA={
   members:  ['Members','All group members'],
   events:   ['Events','Group events & contributions']
 };
-
-async function showView(id, navEl){
+async function showView(id,navEl){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('view-'+id).classList.add('active');
@@ -1046,58 +1034,52 @@ async function showView(id, navEl){
   const[t,s]=VMETA[id];
   document.getElementById('topbar-title').textContent=t;
   document.getElementById('topbar-sub').textContent=s;
-  _currentView=id;
-  updateTopbarAddBtn(id);
-  setBnav(id);
+  _currentView=id; updateTopbarAddBtn(id); setBnav(id);
   await fetchAll();
-  if(id==='dashboard') renderDashboard();
-  if(id==='members')   renderMembers();
-  if(id==='events')    renderEventsList();
+  if(id==='dashboard')renderDashboard();
+  if(id==='members')  renderMembers();
+  if(id==='events')   renderEventsList();
 }
 
 /* ══════════════════════════════════════════════════════
    DASHBOARD
 ══════════════════════════════════════════════════════ */
 function renderDashboard(){
-  const M=_members, E=_events;
+  const M=_members,E=_events;
   const total=M.reduce((s,m)=>s+m.deposit,0);
   const paid=M.filter(m=>m.deposit>=PER).length;
   const unpaid=M.filter(m=>m.deposit===0).length;
-
   document.getElementById('stats-grid').innerHTML=`
     <div class="stat-card green"><div class="stat-icon">💰</div><div class="stat-value">${fmt(total)}</div><div class="stat-label">Collected (TZS)</div><div class="stat-sub">${M.length} members</div></div>
-    <div class="stat-card amber"><div class="stat-icon">✅</div><div class="stat-value">${paid}</div><div class="stat-label">Ada Paid</div><div class="stat-sub">of ${M.length}</div></div>
+    <div class="stat-card amber"><div class="stat-icon">✅</div><div class="stat-value">${paid}</div><div class="stat-label">March Paid</div><div class="stat-sub">of ${M.length}</div></div>
     <div class="stat-card blue"><div class="stat-icon">📅</div><div class="stat-value">${E.length}</div><div class="stat-label">Events</div><div class="stat-sub">total created</div></div>
     <div class="stat-card red"><div class="stat-icon">❌</div><div class="stat-value">${unpaid}</div><div class="stat-label">Not Paid</div><div class="stat-sub">zero deposit</div></div>`;
-
   document.getElementById('dash-payment-list').innerHTML=
     [...M].sort((a,b)=>b.deposit-a.deposit).map(m=>`
       <li class="payment-item">
         <div class="member-avatar">${ini(m.name)}</div>
-        <span class="payment-name">${m.name}</span>
+        <span class="payment-name">${esc(m.name)}</span>
         <span class="payment-deposit">TZS ${fmt(m.deposit)}</span>
         <span class="status-dot dot-${depStatus(m.deposit)}"></span>
       </li>`).join('');
-
   const maxE=M.length*PER;
   document.getElementById('month-progress').innerHTML=MONTHS.map(mo=>{
     const a=M.reduce((s,m)=>s+splitDep(m.deposit)[mo],0);
     const p=maxE>0?Math.round(a/maxE*100):0;
     return`<div class="month-row">
-      <span class="month-label">${ML[mo]}</span>
+      <span class="month-label">${ML[mo].slice(0,3)}</span>
       <div class="progress-bar"><div class="progress-fill ${p>=100?'':p>0?'partial':''}" style="width:${p}%"></div></div>
       <span class="month-pct">${p}%</span>
     </div>`;}).join('');
-
   const evEl=document.getElementById('dash-events-list');
   if(!E.length){
     evEl.innerHTML='<li class="payment-item" style="color:var(--text3);font-size:13px;justify-content:center">No events yet</li>';
   } else {
     evEl.innerHTML=[...E].slice(0,4).map(ev=>{
       const paidCount=(ev.contributions||[]).filter(c=>c.paid).length;
-      return`<li class="payment-item" style="cursor:pointer" onclick="openEventDetail('${ev.id}')">
+      return`<li class="payment-item" style="cursor:pointer" onclick="openEventDetail('${esc(ev.id)}')">
         <div class="member-avatar" style="background:#fef3e2;color:var(--accent);font-size:16px">📅</div>
-        <div style="flex:1;min-width:0"><div class="payment-name">${ev.name}</div><div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">${fmtDate(ev.date)}</div></div>
+        <div style="flex:1;min-width:0"><div class="payment-name">${esc(ev.name)}</div><div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">${fmtDate(ev.date)}</div></div>
         <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text2)">${paidCount}/${M.length}</span>
       </li>`;}).join('');
   }
@@ -1109,10 +1091,7 @@ function renderDashboard(){
 function renderMembers(){
   const q=(document.getElementById('search-input')?.value||'').toLowerCase();
   const rf=document.getElementById('role-filter')?.value||'';
-  const list=_members
-    .filter(m=>(!q||(m.name.toLowerCase().includes(q)||m.phone.includes(q)))&&(!rf||m.role===rf));
-
-  // Desktop table
+  const list=_members.filter(m=>(!q||(m.name.toLowerCase().includes(q)||m.phone.includes(q)))&&(!rf||m.role===rf));
   const tbody=document.getElementById('members-tbody');
   const empty=document.getElementById('empty-members');
   if(!list.length){
@@ -1128,10 +1107,10 @@ function renderMembers(){
         <td class="sticky-col" style="left:36px">
           <div class="member-name-cell">
             <div class="member-avatar">${ini(m.name)}</div>
-            <div><div class="member-name">${m.name}</div><div class="member-phone">${m.phone}</div></div>
+            <div><div class="member-name">${esc(m.name)}</div><div class="member-phone">${esc(m.phone)}</div></div>
           </div>
         </td>
-        <td class="center"><span class="role-pill ${rc}">${m.role}</span></td>
+        <td class="center"><span class="role-pill ${rc}">${esc(m.role)}</span></td>
         <td class="right"><span class="${m.deposit>0?'amount-cell':'amount-zero'}">${fmt(m.deposit)}</span></td>
         ${MONTHS.map(mo=>`<td class="center">${pill(sp[mo])}</td>`).join('')}
         <td class="center" onclick="event.stopPropagation()" ${!isAdmin()?'style="display:none"':''}>
@@ -1152,8 +1131,6 @@ function renderMembers(){
       ${MONTHS.map(mo=>`<td class="center">${tots[mo]>0?fmt(tots[mo]):''}</td>`).join('')}
       <td></td></tr>`;
   }
-
-  // Mobile cards
   const cardsEl=document.getElementById('member-cards');
   const emptyC=document.getElementById('empty-cards');
   if(!list.length){cardsEl.innerHTML='';emptyC.style.display='block';}
@@ -1162,15 +1139,15 @@ function renderMembers(){
     cardsEl.innerHTML=list.map(m=>{
       const sp=splitDep(m.deposit);
       const rc=m.role==='CHAIRPERSON'?'role-chair':m.role==='TREASURER'?'role-treasurer':'role-member';
-      const pp=MONTHS.slice(0,4).map(mo=>{const a=sp[mo],s=depStatus(a);return`<span class="pay-pill pay-${s==='partial'?'unpaid':s}" style="font-size:9px">${ML[mo]}:${a>0?fmt(a):'—'}</span>`;}).join('');
+      const pp=MONTHS.slice(0,4).map(mo=>{const a=sp[mo],s=depStatus(a);return`<span class="pay-pill pay-${s==='partial'?'unpaid':s}" style="font-size:9px">${ML[mo].slice(0,3)}:${a>0?fmt(a):'—'}</span>`;}).join('');
       return`<div class="member-card" onclick="viewMemberDetail(${m.id})">
         <div class="member-card-top">
           <div class="mc-avatar">${ini(m.name)}</div>
-          <div class="mc-info"><div class="mc-name">${m.name}</div><div class="mc-phone">${m.phone}</div></div>
+          <div class="mc-info"><div class="mc-name">${esc(m.name)}</div><div class="mc-phone">${esc(m.phone)}</div></div>
           <div class="mc-deposit"><div class="mc-dep-val ${m.deposit===0?'zero':''}">${fmt(m.deposit)}</div><div class="mc-dep-label">TZS</div></div>
         </div>
         <div class="member-card-pills" onclick="event.stopPropagation()">
-          <span class="role-pill ${rc} mc-role">${m.role}</span>${pp}
+          <span class="role-pill ${rc} mc-role">${esc(m.role)}</span>${pp}
         </div>
         <div class="member-card-actions" onclick="event.stopPropagation()" ${!isAdmin()?'style="display:none"':''}>
           <button class="btn btn-ghost btn-sm" onclick="openEditMember(${m.id})">✏️ Edit</button>
@@ -1185,43 +1162,33 @@ function renderMembers(){
    EVENTS LIST
 ══════════════════════════════════════════════════════ */
 function renderEventsList(){
-  const events=_events;
-  const members=_members;
+  const events=_events,members=_members;
   document.getElementById('events-count-label').textContent=`${events.length} event${events.length!==1?'s':''} created`;
-  // Show/hide New Event button based on role
-  const addEvBtn = document.querySelector('#events-list-screen .btn-add-desktop');
-  if(addEvBtn) addEvBtn.style.display = isAdmin() ? '' : 'none';
+  const addEvBtn=document.querySelector('#events-list-screen .btn-add-desktop');
+  if(addEvBtn)addEvBtn.style.display=isAdmin()?'':'none';
   const wrap=document.getElementById('events-grid-wrap');
-
   if(!events.length){
-    wrap.innerHTML=`<div class="events-empty">
-      <div class="icon">📅</div><h3>No events yet</h3>
-      <p>Create your first event to start tracking member contributions.</p>
-    </div>`;return;
+    wrap.innerHTML=`<div class="events-empty"><div class="icon">📅</div><h3>No events yet</h3><p>Create your first event to start tracking member contributions.</p></div>`;return;
   }
-
   wrap.innerHTML=`<div class="events-grid">${events.map(ev=>{
     const contribs=ev.contributions||[];
     const paidCount=contribs.filter(c=>c.paid).length;
-    const total=members.length;
-    const pct=total>0?Math.round(paidCount/total*100):0;
+    const total=members.length,pct=total>0?Math.round(paidCount/total*100):0;
     const collected=paidCount*(ev.amount||0);
-    return`<div class="event-card" onclick="openEventDetail('${ev.id}')">
+    return`<div class="event-card" onclick="openEventDetail('${esc(ev.id)}')">
       <div class="event-card-banner"></div>
       <div class="event-card-body">
         <div class="event-card-top">
-          <div class="event-name">${ev.name}</div>
+          <div class="event-name">${esc(ev.name)}</div>
           <span class="event-date-badge">📅 ${fmtDate(ev.date)}</span>
         </div>
-        <div class="event-desc">${ev.description||'<span style="color:var(--border)">No description</span>'}</div>
+        <div class="event-desc">${ev.description?esc(ev.description):'<span style="color:var(--border)">No description</span>'}</div>
         <div class="event-amount-row">
           <span class="event-amount-label">Per member</span>
           <span class="event-amount-val">TZS ${fmt(ev.amount||0)}</span>
         </div>
         <div class="event-progress-row">
-          <div class="event-prog-bar-wrap">
-            <div class="event-prog-bar"><div class="event-prog-fill" style="width:${pct}%"></div></div>
-          </div>
+          <div class="event-prog-bar-wrap"><div class="event-prog-bar"><div class="event-prog-fill" style="width:${pct}%"></div></div></div>
           <span class="event-prog-label">${pct}% paid</span>
         </div>
         <div class="event-counters">
@@ -1231,9 +1198,9 @@ function renderEventsList(){
         </div>
       </div>
       <div class="event-card-footer" onclick="event.stopPropagation()">
-        ${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="openEditEvent('${ev.id}')">✏️ Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="askDeleteEvent('${ev.id}')">🗑 Delete</button>`:''}
-        <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openEventDetail('${ev.id}')">View →</button>
+        ${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="openEditEvent('${esc(ev.id)}')">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="askDeleteEvent('${esc(ev.id)}')">🗑 Delete</button>`:''}
+        <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openEventDetail('${esc(ev.id)}')">View →</button>
       </div>
     </div>`;}).join('')}</div>`;
 }
@@ -1244,67 +1211,57 @@ function renderEventsList(){
 async function openEventDetail(evId){
   document.getElementById('events-list-screen').style.display='none';
   document.getElementById('events-detail-screen').style.display='block';
-  await fetchAll();
-  renderEventDetail(evId);
+  await fetchAll();renderEventDetail(evId);
 }
-
 function renderEventDetail(evId){
-  const ev=_events.find(e=>e.id===evId);
-  if(!ev)return;
+  const ev=_events.find(e=>e.id===evId);if(!ev)return;
   const members=_members;
   const contribs=_contribs.filter(c=>c.event_id===evId);
   const paidCount=contribs.filter(c=>c.paid).length;
-  const total=members.length;
-  const pct=total>0?Math.round(paidCount/total*100):0;
-  const collected=paidCount*(ev.amount||0);
-  const outstanding=(total-paidCount)*(ev.amount||0);
-
-  // Sort: unpaid first
+  const total=members.length,pct=total>0?Math.round(paidCount/total*100):0;
+  const collected=paidCount*(ev.amount||0),outstanding=(total-paidCount)*(ev.amount||0);
   const sorted=[...members].sort((a,b)=>{
     const aP=contribs.find(c=>c.member_id===a.id)?.paid||false;
     const bP=contribs.find(c=>c.member_id===b.id)?.paid||false;
     if(aP===bP)return a.name.localeCompare(b.name);
     return aP?1:-1;
   });
-
+  const safeId=esc(evId);
   document.getElementById('event-detail-content').innerHTML=`
     <div class="event-detail-hero">
       <div class="event-detail-hero-banner"></div>
       <div class="event-detail-hero-body">
         <div class="event-detail-top">
           <div>
-            <div class="event-detail-name">${ev.name}</div>
+            <div class="event-detail-name">${esc(ev.name)}</div>
             <div class="event-detail-meta">
               <span class="meta-badge meta-date">📅 ${fmtDate(ev.date)}</span>
               <span class="meta-badge meta-amount">TZS ${fmt(ev.amount||0)} / member</span>
             </div>
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0">
-            ${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="openEditEvent('${ev.id}')">✏️ Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="askDeleteEvent('${ev.id}')">🗑</button>`:''}
+            ${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="openEditEvent('${safeId}')">✏️ Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="askDeleteEvent('${safeId}')">🗑</button>`:''}
           </div>
         </div>
-        ${ev.description?`<div class="event-detail-desc">${ev.description}</div>`:''}
+        ${ev.description?`<div class="event-detail-desc">${esc(ev.description)}</div>`:''}
         <div class="event-detail-stats">
-          <div class="eds-card paid"><div class="eds-val" id="eds-paid-${evId}">${paidCount}</div><div class="eds-label">Paid</div></div>
-          <div class="eds-card unpaid"><div class="eds-val" id="eds-pend-${evId}">${total-paidCount}</div><div class="eds-label">Pending</div></div>
-          <div class="eds-card total"><div class="eds-val" id="eds-coll-${evId}">TZS ${fmt(collected)}</div><div class="eds-label">Collected</div></div>
+          <div class="eds-card paid"><div class="eds-val" id="eds-paid-${safeId}">${paidCount}</div><div class="eds-label">Paid</div></div>
+          <div class="eds-card unpaid"><div class="eds-val" id="eds-pend-${safeId}">${total-paidCount}</div><div class="eds-label">Pending</div></div>
+          <div class="eds-card total"><div class="eds-val" id="eds-coll-${safeId}">TZS ${fmt(collected)}</div><div class="eds-label">Collected</div></div>
         </div>
         <div style="margin-top:14px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
             <span style="font-size:12px;font-weight:600;color:var(--text2)">Collection progress</span>
-            <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3)" id="eds-prog-label-${evId}">${pct}% · TZS ${fmt(outstanding)} outstanding</span>
+            <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3)" id="eds-prog-label-${safeId}">${pct}% · TZS ${fmt(outstanding)} outstanding</span>
           </div>
           <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden">
-            <div id="eds-prog-bar-${evId}" style="height:100%;width:${pct}%;background:var(--primary);border-radius:4px;transition:width .4s"></div>
+            <div id="eds-prog-bar-${safeId}" style="height:100%;width:${pct}%;background:var(--primary);border-radius:4px;transition:width .4s"></div>
           </div>
         </div>
       </div>
     </div>
-
     <div class="contrib-section-title">Member Contributions (${total})</div>
-
-    <!-- Desktop -->
     <div class="contrib-table-wrap">
       ${sorted.map((m,i)=>{
         const c=contribs.find(x=>x.member_id===m.id);
@@ -1314,22 +1271,20 @@ function renderEventDetail(evId){
           <span class="contrib-num">${i+1}</span>
           <div class="contrib-avatar">${ini(m.name)}</div>
           <div class="contrib-info">
-            <div class="contrib-name">${m.name}</div>
-            <div class="contrib-role"><span class="role-pill ${rc}">${m.role}</span></div>
+            <div class="contrib-name">${esc(m.name)}</div>
+            <div class="contrib-role"><span class="role-pill ${rc}">${esc(m.role)}</span></div>
           </div>
           <div class="contrib-status">
             <div class="toggle-wrap">
               <label class="toggle">
-                <input type="checkbox" ${isPaid?'checked':''} onchange="toggleContrib('${evId}',${m.id},this.checked)">
+                <input type="checkbox" ${isPaid?'checked':''} ${!isAdmin()?'disabled':''} onchange="toggleContrib('${safeId}',${m.id},this.checked)">
                 <span class="toggle-slider"></span>
               </label>
-              <span class="${isPaid?'paid-label':'unpaid-label'}" id="tlabel-${evId}-${m.id}">${isPaid?'✓ Paid':'Pending'}</span>
+              <span class="${isPaid?'paid-label':'unpaid-label'}" id="tlabel-${safeId}-${m.id}">${isPaid?'✓ Paid':'Pending'}</span>
             </div>
           </div>
         </div>`;}).join('')}
     </div>
-
-    <!-- Mobile -->
     <div class="contrib-cards">
       ${sorted.map(m=>{
         const c=contribs.find(x=>x.member_id===m.id);
@@ -1338,20 +1293,19 @@ function renderEventDetail(evId){
         return`<div class="contrib-card">
           <div class="contrib-avatar">${ini(m.name)}</div>
           <div class="contrib-card-info">
-            <div class="contrib-card-name">${m.name}</div>
-            <div class="contrib-card-role"><span class="role-pill ${rc}">${m.role}</span></div>
+            <div class="contrib-card-name">${esc(m.name)}</div>
+            <div class="contrib-card-role"><span class="role-pill ${rc}">${esc(m.role)}</span></div>
           </div>
           <div class="contrib-card-toggle">
             <label class="toggle">
-              <input type="checkbox" ${isPaid?'checked':''} onchange="toggleContrib('${evId}',${m.id},this.checked)">
+              <input type="checkbox" ${isPaid?'checked':''} ${!isAdmin()?'disabled':''} onchange="toggleContrib('${safeId}',${m.id},this.checked)">
               <span class="toggle-slider"></span>
             </label>
-            <span class="${isPaid?'paid-label':'unpaid-label'}" id="clabel-${evId}-${m.id}" style="font-size:10px">${isPaid?'Paid':'Pending'}</span>
+            <span class="${isPaid?'paid-label':'unpaid-label'}" id="clabel-${safeId}-${m.id}" style="font-size:10px">${isPaid?'Paid':'Pending'}</span>
           </div>
         </div>`;}).join('')}
     </div>`;
 }
-
 function backToEvents(){
   document.getElementById('events-list-screen').style.display='';
   document.getElementById('events-detail-screen').style.display='none';
@@ -1359,68 +1313,35 @@ function backToEvents(){
 }
 
 /* ══════════════════════════════════════════════════════
-   TOGGLE CONTRIBUTION — upsert to Supabase
+   TOGGLE CONTRIBUTION
 ══════════════════════════════════════════════════════ */
-async function toggleContrib(evId, memberId, paid){
-  // Coerce to correct types
-  memberId = Number(memberId);
-
-  // Snapshot current state for revert
-  const existing = _contribs.find(c=>c.event_id===evId && c.member_id===memberId);
-  const prevPaid  = existing?.paid || false;
-
-  // Optimistic UI update
+async function toggleContrib(evId,memberId,paid){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
+  memberId=Number(memberId);
+  const existing=_contribs.find(c=>c.event_id===evId&&c.member_id===memberId);
+  const prevPaid=existing?.paid||false;
   const l1=document.getElementById(`tlabel-${evId}-${memberId}`);
   const l2=document.getElementById(`clabel-${evId}-${memberId}`);
   function setLabels(p){
-    if(l1){l1.textContent=p?'✓ Paid':'Pending'; l1.className=p?'paid-label':'unpaid-label';}
-    if(l2){l2.textContent=p?'Paid':'Pending';   l2.className=p?'paid-label':'unpaid-label'; l2.style.fontSize='10px';}
+    if(l1){l1.textContent=p?'✓ Paid':'Pending';l1.className=p?'paid-label':'unpaid-label';}
+    if(l2){l2.textContent=p?'Paid':'Pending';l2.className=p?'paid-label':'unpaid-label';l2.style.fontSize='10px';}
   }
   setLabels(paid);
-
-  try {
-    // Proper upsert — use PATCH if row exists, POST if not
-    if(existing){
-      await sbPatch(
-        'contributions',
-        `event_id=eq.${evId}&member_id=eq.${memberId}`,
-        {paid, updated_at: new Date().toISOString()}
-      );
-    } else {
-      // Use plain POST with conflict resolution header
-      const res = await fetch(`${SUPA_URL}/rest/v1/contributions`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPA_KEY,
-          'Authorization': `Bearer ${SUPA_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates,return=minimal'
-        },
-        body: JSON.stringify({event_id:evId, member_id:memberId, paid, updated_at:new Date().toISOString()})
-      });
-      if(!res.ok){ const t=await res.text(); throw new Error(t); }
-    }
-
-    // Update local cache
-    const idx=_contribs.findIndex(c=>c.event_id===evId && c.member_id===memberId);
-    if(idx!==-1) _contribs[idx].paid=paid;
-    else _contribs.push({event_id:evId, member_id:memberId, paid});
-
+  try{
+    await dbUpsert('contributions',{event_id:evId,member_id:memberId,paid,updated_at:new Date().toISOString()},'event_id,member_id');
+    const idx=_contribs.findIndex(c=>c.event_id===evId&&c.member_id===memberId);
+    if(idx!==-1)_contribs[idx].paid=paid;
+    else _contribs.push({event_id:evId,member_id:memberId,paid});
     refreshEventHeroStats(evId);
     toast(paid?'✅ Marked as paid':'⏪ Marked as pending');
-  } catch(e) {
-    // Revert to previous state
+  }catch(e){
     setLabels(prevPaid);
-    // Also revert the checkbox visually
-    const checkboxes = document.querySelectorAll(
-      `input[type="checkbox"][onchange*="toggleContrib('${evId}',${memberId}"]`
-    );
-    checkboxes.forEach(cb => cb.checked = prevPaid);
-    toast('❌ Failed to save — check connection');
-    console.error('toggleContrib error:', e);
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+      if(cb.getAttribute('onchange')?.includes(`'${evId}',${memberId}`))cb.checked=prevPaid;
+    });
+    toast('❌ Failed to save');console.error(e);
   }
 }
-
 function refreshEventHeroStats(evId){
   const contribs=_contribs.filter(c=>c.event_id===evId);
   const ev=_events.find(e=>e.id===evId);
@@ -1429,11 +1350,10 @@ function refreshEventHeroStats(evId){
   const pct=total>0?Math.round(paidCount/total*100):0;
   const collected=paidCount*(ev?.amount||0);
   const outstanding=(total-paidCount)*(ev?.amount||0);
-
   const el=id=>document.getElementById(id);
-  if(el(`eds-paid-${evId}`))el(`eds-paid-${evId}`).textContent=paidCount;
-  if(el(`eds-pend-${evId}`))el(`eds-pend-${evId}`).textContent=total-paidCount;
-  if(el(`eds-coll-${evId}`))el(`eds-coll-${evId}`).textContent=`TZS ${fmt(collected)}`;
+  if(el(`eds-paid-${evId}`))    el(`eds-paid-${evId}`).textContent=paidCount;
+  if(el(`eds-pend-${evId}`))    el(`eds-pend-${evId}`).textContent=total-paidCount;
+  if(el(`eds-coll-${evId}`))    el(`eds-coll-${evId}`).textContent=`TZS ${fmt(collected)}`;
   if(el(`eds-prog-bar-${evId}`))el(`eds-prog-bar-${evId}`).style.width=pct+'%';
   if(el(`eds-prog-label-${evId}`))el(`eds-prog-label-${evId}`).textContent=`${pct}% · TZS ${fmt(outstanding)} outstanding`;
 }
@@ -1442,15 +1362,15 @@ function refreshEventHeroStats(evId){
    ADD / EDIT EVENT
 ══════════════════════════════════════════════════════ */
 function openAddEvent(){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   document.getElementById('modal-event-title').textContent='New Event';
-  document.getElementById('ev-edit-id').value='';
-  document.getElementById('ev-name').value='';
+  ['ev-edit-id','ev-name','ev-desc'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('ev-date').value=new Date().toISOString().slice(0,10);
   document.getElementById('ev-amount').value='10000';
-  document.getElementById('ev-desc').value='';
   openModal('modal-event');
 }
 function openEditEvent(evId){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   const ev=_events.find(e=>e.id===evId);if(!ev)return;
   document.getElementById('modal-event-title').textContent='Edit Event';
   document.getElementById('ev-edit-id').value=evId;
@@ -1461,6 +1381,7 @@ function openEditEvent(evId){
   openModal('modal-event');
 }
 async function saveEvent(){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   const name=document.getElementById('ev-name').value.trim();
   const date=document.getElementById('ev-date').value;
   const amount=parseInt(document.getElementById('ev-amount').value)||0;
@@ -1468,27 +1389,19 @@ async function saveEvent(){
   const eid=document.getElementById('ev-edit-id').value;
   if(!name){toast('⚠️ Event name required');return;}
   if(!date){toast('⚠️ Date required');return;}
-
   showLoader(true);
-  try {
+  try{
     if(eid){
-      await sbPatch('events',`id=eq.${eid}`,{name,date,amount,description});
+      await dbUpdate('events',{id:eid},{name,date,amount,description});
       toast('✅ Event updated');
     } else {
       const evId='ev_'+Date.now();
-      await sbPost('events',{id:evId,name,date,amount,description});
-      // Insert a contribution row (unpaid) for every current member
-      if(_members.length){
-        await sbPost('contributions', _members.map(m=>({event_id:evId,member_id:m.id,paid:false})));
-      }
+      await dbInsert('events',{id:evId,name,date,amount,description});
+      if(_members.length) await dbInsert('contributions',_members.map(m=>({event_id:evId,member_id:m.id,paid:false})));
       toast('✅ Event created');
     }
-    closeModal('modal-event');
-    await fetchAll();
-    renderEventsList();
-  } catch(e){
-    toast('❌ Failed to save event');console.error(e);
-  }
+    closeModal('modal-event');await fetchAll();renderEventsList();
+  }catch(e){toast('❌ Failed to save event');console.error(e);}
   showLoader(false);
 }
 
@@ -1496,17 +1409,17 @@ async function saveEvent(){
    DELETE EVENT
 ══════════════════════════════════════════════════════ */
 function askDeleteEvent(evId){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   const ev=_events.find(e=>e.id===evId);if(!ev)return;
   document.getElementById('confirm-title').textContent='Delete Event';
-  document.getElementById('confirm-text').innerHTML=`Delete event <strong>"${ev.name}"</strong>? All contribution data will be lost.`;
+  document.getElementById('confirm-text').innerHTML=`Delete event <strong>"${esc(ev.name)}"</strong>? All contribution data will be lost.`;
   document.getElementById('confirm-ok-btn').textContent='🗑 Delete Event';
   document.getElementById('confirm-ok-btn').onclick=async()=>{
     showLoader(true);
     try{
-      await sbDel('events',`id=eq.${evId}`); // cascade deletes contributions
+      await dbDelete('events',{id:evId});
       toast('🗑 Event deleted');closeModal('modal-confirm');
-      backToEvents();
-      await fetchAll();renderEventsList();
+      backToEvents();await fetchAll();renderEventsList();
     }catch(e){toast('❌ Failed to delete');console.error(e);}
     showLoader(false);
   };
@@ -1517,6 +1430,7 @@ function askDeleteEvent(evId){
    MEMBER CRUD
 ══════════════════════════════════════════════════════ */
 function openAddMember(){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   document.getElementById('modal-member-title').textContent='Add Member';
   ['edit-id','f-name','f-phone','f-deposit'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('f-role').value='MEMBER';
@@ -1524,6 +1438,7 @@ function openAddMember(){
   openModal('modal-member');
 }
 function openEditMember(id){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   const m=_members.find(x=>x.id===id);if(!m)return;
   document.getElementById('modal-member-title').textContent='Edit Member';
   document.getElementById('edit-id').value=id;
@@ -1535,6 +1450,7 @@ function openEditMember(id){
   openModal('modal-member');
 }
 async function saveMember(){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   const name=document.getElementById('f-name').value.trim().toUpperCase();
   const phone=document.getElementById('f-phone').value.trim();
   const role=document.getElementById('f-role').value;
@@ -1542,35 +1458,31 @@ async function saveMember(){
   const type=document.getElementById('f-type').value.trim();
   const eid=document.getElementById('edit-id').value;
   if(!name||!phone){toast('⚠️ Name and phone required');return;}
-
   showLoader(true);
   try{
     if(eid){
-      await sbPatch('members',`id=eq.${eid}`,{name,phone,role,deposit,type});
+      await dbUpdate('members',{id:parseInt(eid)},{name,phone,role,deposit,type});
       toast('✅ Member updated');
     } else {
-      const [newMember]=await sbPost('members',{name,phone,role,deposit,type});
-      // Add to all existing events as unpaid
-      if(_events.length && newMember?.id){
-        await sbPost('contributions',_events.map(ev=>({event_id:ev.id,member_id:newMember.id,paid:false})));
-      }
+      const[newMember]=await dbInsert('members',{name,phone,role,deposit,type});
+      if(_events.length&&newMember?.id)
+        await dbInsert('contributions',_events.map(ev=>({event_id:ev.id,member_id:newMember.id,paid:false})));
       toast('✅ Member added');
     }
-    closeModal('modal-member');
-    await fetchAll();
-    renderMembers();renderDashboard();
+    closeModal('modal-member');await fetchAll();renderMembers();renderDashboard();
   }catch(e){toast('❌ Failed to save member');console.error(e);}
   showLoader(false);
 }
 function askDeleteMember(id){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   const m=_members.find(x=>x.id===id);if(!m)return;
   document.getElementById('confirm-title').textContent='Delete Member';
-  document.getElementById('confirm-text').innerHTML=`Delete <strong>${m.name}</strong>? This cannot be undone.`;
+  document.getElementById('confirm-text').innerHTML=`Delete <strong>${esc(m.name)}</strong>? This cannot be undone.`;
   document.getElementById('confirm-ok-btn').textContent='🗑 Delete Member';
   document.getElementById('confirm-ok-btn').onclick=async()=>{
     showLoader(true);
     try{
-      await sbDel('members',`id=eq.${id}`);
+      await dbDelete('members',{id});
       toast('🗑 Member deleted');closeModal('modal-confirm');
       await fetchAll();renderMembers();renderDashboard();
     }catch(e){toast('❌ Failed to delete');console.error(e);}
@@ -1578,42 +1490,39 @@ function askDeleteMember(id){
   };
   openModal('modal-confirm');
 }
-
-/* ══════════════════════════════════════════════════════
-   MEMBER DETAIL
-══════════════════════════════════════════════════════ */
 function viewMemberDetail(id){
   const m=_members.find(x=>x.id===id);if(!m)return;
   const sp=splitDep(m.deposit);
   document.getElementById('detail-body').innerHTML=`
     <div class="detail-header">
       <div class="detail-avatar">${ini(m.name)}</div>
-      <div><div class="detail-name">${m.name}</div><div class="detail-phone">${m.phone}</div></div>
+      <div><div class="detail-name">${esc(m.name)}</div><div class="detail-phone">${esc(m.phone)}</div></div>
     </div>
     <div class="detail-grid">
-      <div class="detail-field"><div class="detail-field-label">Role</div><div class="detail-field-value">${m.role}</div></div>
-      <div class="detail-field"><div class="detail-field-label">Type</div><div class="detail-field-value">${m.type}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Role</div><div class="detail-field-value">${esc(m.role)}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Type</div><div class="detail-field-value">${esc(m.type)}</div></div>
       <div class="detail-field"><div class="detail-field-label">Total Deposit</div><div class="detail-field-value" style="color:var(--primary)">TZS ${fmt(m.deposit)}</div></div>
       <div class="detail-field"><div class="detail-field-label">Periods Covered</div><div class="detail-field-value">${Math.floor(m.deposit/PER)} / ${MONTHS.length}</div></div>
     </div>
     <div class="payments-section-title">Period Breakdown</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px">
       ${MONTHS.map(mo=>{const a=sp[mo],s=depStatus(a);return`<div class="payment-box ${s==='partial'?'paid':s}">
-        <div class="payment-box-month">${ML[mo]}</div>
+        <div class="payment-box-month">${ML[mo].slice(0,3)}</div>
         <div class="payment-box-amount">${a>0?fmt(a):'—'}</div>
       </div>`;}).join('')}
     </div>`;
-  document.getElementById('detail-edit-btn').style.display = isAdmin() ? '' : 'none';
+  document.getElementById('detail-edit-btn').style.display=isAdmin()?'':'none';
   document.getElementById('detail-edit-btn').onclick=()=>{closeModal('modal-detail');openEditMember(id);};
   openModal('modal-detail');
 }
 
 /* ══════════════════════════════════════════════════════
-   PAYMENT (deposit update)
+   PAYMENT
 ══════════════════════════════════════════════════════ */
 function openPayment(id){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   const m=_members.find(x=>x.id===id);if(!m)return;
-  document.getElementById('payment-modal-title').textContent=`Payment — ${m.name}`;
+  document.getElementById('payment-modal-title').textContent=`Payment — ${esc(m.name)}`;
   document.getElementById('pay-member-id').value=id;
   document.getElementById('pay-total').value=m.deposit;
   previewSplit();openModal('modal-payment');
@@ -1624,21 +1533,20 @@ function previewSplit(){
   document.getElementById('split-preview').innerHTML=`
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px">Split Preview</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
-      ${MONTHS.map(mo=>{
-        const a=sp[mo],s=depStatus(a);
-        const ok=s==='paid'||s==='partial';
+      ${MONTHS.map(mo=>{const a=sp[mo],s=depStatus(a);const ok=s==='paid'||s==='partial';
         return`<div style="background:${ok?'var(--paid-bg)':'var(--unpaid-bg)'};border-radius:7px;padding:8px 4px;text-align:center;border:1px solid ${ok?'#b2ddd1':'var(--border)'}">
-          <div style="font-size:9px;font-weight:700;color:${ok?'var(--paid)':'var(--text3)'};text-transform:uppercase;margin-bottom:3px">${ML[mo]}</div>
+          <div style="font-size:9px;font-weight:700;color:${ok?'var(--paid)':'var(--text3)'};text-transform:uppercase;margin-bottom:3px">${ML[mo].slice(0,3)}</div>
           <div style="font-size:11px;font-family:'DM Mono',monospace;color:${ok?'var(--paid)':'var(--text3)'}">${a>0?fmt(a):'—'}</div>
         </div>`;}).join('')}
     </div>`;
 }
 async function savePayment(){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   const id=parseInt(document.getElementById('pay-member-id').value);
   const dep=parseInt(document.getElementById('pay-total').value)||0;
   showLoader(true);
   try{
-    await sbPatch('members',`id=eq.${id}`,{deposit:dep});
+    await dbUpdate('members',{id},{deposit:dep});
     toast('💳 Payment saved');closeModal('modal-payment');
     await fetchAll();renderMembers();renderDashboard();
   }catch(e){toast('❌ Failed to save payment');console.error(e);}
@@ -1646,9 +1554,10 @@ async function savePayment(){
 }
 
 /* ══════════════════════════════════════════════════════
-   EXPORT CSV
+   EXPORT
 ══════════════════════════════════════════════════════ */
 function exportCSV(){
+  if(!isAdmin()){toast('🔒 Admin only');return;}
   closeExportMenu();
   const M=[..._members].sort((a,b)=>b.deposit-a.deposit);
   const h=['#','Name','Phone','Role','Type','Total',...MONTHS.map(m=>ML[m])];
@@ -1659,7 +1568,7 @@ function exportCSV(){
   a.download='UMOJA_WVJ_'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();toast('📄 CSV exported');
 }
-function exportPrint(){closeExportMenu();setTimeout(()=>window.print(),200);}
+function exportPrint(){if(!isAdmin()){toast('🔒 Admin only');return;}closeExportMenu();setTimeout(()=>window.print(),200);}
 function toggleExportMenu(){document.getElementById('export-menu').classList.toggle('open');}
 function closeExportMenu(){document.getElementById('export-menu').classList.remove('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.export-wrap'))closeExportMenu();});
@@ -1679,28 +1588,46 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
 let _tt;
 function toast(msg){
   const ex=document.querySelector('.toast');if(ex)ex.remove();clearTimeout(_tt);
-  const el=document.createElement('div');el.className='toast';el.textContent=msg;
+  const el=document.createElement('div');el.className='toast';
+  el.textContent=msg;
   document.body.appendChild(el);_tt=setTimeout(()=>el.remove(),2800);
 }
 
 /* ══════════════════════════════════════════════════════
-   INIT — check session first
+   EXPOSE TO GLOBAL — required for type="module" scope
 ══════════════════════════════════════════════════════ */
-(()=>{
-  const session = getSession();
+Object.assign(window,{
+  doLogin,doLogout,
+  showView,toggleSidebar,closeSidebar,setBnav,
+  handleTopbarAdd,handleFab,
+  renderMembers,renderDashboard,renderEventsList,
+  openAddMember,openEditMember,saveMember,askDeleteMember,viewMemberDetail,
+  openPayment,savePayment,previewSplit,
+  openAddEvent,openEditEvent,saveEvent,askDeleteEvent,
+  openEventDetail,backToEvents,toggleContrib,
+  exportCSV,exportPrint,toggleExportMenu,closeExportMenu,
+  openModal,closeModal,
+});
+
+/* ══════════════════════════════════════════════════════
+   INIT — restore session if valid, else show login
+══════════════════════════════════════════════════════ */
+(async()=>{
+  const { data:{ session } } = await supabase.auth.getSession();
   if(session){
-    // Already logged in — skip login screen
-    document.getElementById('login-screen').classList.remove('active');
-    applyRoleUI(session.role);
-    (async()=>{
+    const role=session.user?.user_metadata?.role;
+    if(role==='admin'||role==='member'){
+      _currentUser=session.user; _currentRole=role;
+      document.getElementById('login-screen').classList.remove('active');
+      applyRoleUI(role);
+      startInactivityWatcher();
       await fetchAll();
       renderDashboard();
-    })();
-  } else {
-    // Show login screen
-    document.getElementById('login-screen').classList.add('active');
-    setTimeout(()=>document.getElementById('member-pass')?.focus(), 200);
+      return;
+    }
   }
+  document.getElementById('login-screen').classList.add('active');
+  setTimeout(()=>document.getElementById('login-email')?.focus(),200);
 })();
 </script>
 </body>
